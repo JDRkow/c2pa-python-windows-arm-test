@@ -1,0 +1,37 @@
+name: Run c2pa-python read.py on Windows 11 ARM64
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  run-read-example:
+    name: Read C2PA manifest (Windows 11 ARM64)
+    runs-on: windows-11-arm
+
+    steps:
+      - name: Checkout c2pa-python
+        uses: actions/checkout@v4
+        with:
+          repository: contentauth/c2pa-python
+          ref: main
+
+      - name: Setup Python (ARM64)
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          architecture: arm64
+
+      - name: Install c2pa-python
+        run: pip install c2pa-python
+
+      - name: Run examples/read.py
+        run: python examples/read.py
+
+      - name: Show Python & c2pa version
+        run: |
+          python --version
+          pip show c2pa-python
