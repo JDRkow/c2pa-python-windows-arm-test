@@ -12,6 +12,14 @@ jobs:
     name: Read C2PA manifest (Windows 11 ARM64)
     runs-on: windows-11-arm
 
+    env:
+      VCPKG_DEFAULT_TRIPLET: arm64-windows
+      OPENSSL_DIR: C:\vcpkg\installed\arm64-windows
+      OPENSSL_INCLUDE_DIR: C:\vcpkg\installed\arm64-windows\include
+      OPENSSL_LIB_DIR: C:\vcpkg\installed\arm64-windows\lib
+      OPENSSL_STATIC: "1"
+      CARGO_BUILD_TARGET: aarch64-pc-windows-msvc
+
     steps:
       - name: Checkout c2pa-python
         uses: actions/checkout@v4
@@ -19,19 +27,50 @@ jobs:
           repository: contentauth/c2pa-python
           ref: main
 
-      - name: Setup Python (ARM64)
+      # ── Python ARM64 ────────────────────────────────────────────────
+      - name: Setup Python 3.12 ARM64
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
           architecture: arm64
 
+      # ── Rust + ARM64 MSVC target ────────────────────────────────────
+      - name: Install Rust stable + aarch64-pc-windows-msvc target
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-pc-windows-msvc
+
+      # ── vcpkg + OpenSSL ARM64 ────────────────────────────────────────
+      - name: Cache vcpkg
+        uses: actions/cache@v4
+        with:
+          path: C:\vcpkg\installed
+          key: vcpkg-arm64-windows-openssl-${{ runner.os }}-v1
+
+      - name: Install OpenSSL via vcpkg (arm64-windows)
+        run: |
+          git clone https://github.com/microsoft/vcpkg C:\vcpkg --depth=1
+          C:\vcpkg\bootstrap-vcpkg.bat -disableMetrics
+          C:\vcpkg\vcpkg install openssl:arm64-windows --no-print-usage
+        shell: cmd
+
+      - name: Install maturin
+        run: pip install maturin
+
       - name: Install c2pa-python
         run: pip install c2pa-python
+        env:
+          OPENSSL_DIR: C:\vcpkg\installed\arm64-windows
+          OPENSSL_LIB_DIR: C:\vcpkg\installed\arm64-windows\lib
+          OPENSSL_INCLUDE_DIR: C:\vcpkg\installed\arm64-windows\include
+          OPENSSL_STATIC: "1"
+          VCPKG_ROOT: C:\vcpkg
+          CARGO_BUILD_TARGET: aarch64-pc-windows-msvc
 
       - name: Run examples/read.py
         run: python examples/read.py
 
-      - name: Show Python & c2pa version
+      - name: Show versions
         run: |
           python --version
           pip show c2pa-python
